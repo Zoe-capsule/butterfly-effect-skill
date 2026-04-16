@@ -162,3 +162,16 @@ git clone https://github.com/Zoe-capsule/butterfly-effect-skill.git
 ---
 
 **Butterfly Effect v3.0 - 让变更更安全** ✅
+
+---
+
+## 👤 作者
+
+**叶清泽**
+
+- GitHub: https://github.com/Zoe-capsule
+- 技能目录: https://github.com/Zoe-capsule/zoe-skills
+
+---
+
+**MIT License © 2026 叶清泽**
