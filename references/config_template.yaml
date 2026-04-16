@@ -1,0 +1,115 @@
+# 蝴蝶效应扫描器配置文件模板
+# 文件名: .butterfly.yaml
+# 位置: workspace根目录
+
+# 扫描配置
+scan:
+  # 扫描模式: full（全扫描）或 incremental（增量扫描）
+  mode: incremental
+  
+  # 是否使用缓存
+  use_cache: true
+  
+  # 缓存文件路径（相对于workspace）
+  cache_file: .butterfly_cache.json
+  
+  # 排除路径（不扫描）
+  exclude_paths:
+    - .git
+    - .bak
+    - node_modules
+    - __pycache__
+    - dist
+    - build
+
+# 扫描类型配置（可自定义扩展名）
+scan_types:
+  code:
+    extensions: [".py", ".js", ".ts", ".go", ".java", ".cpp", ".c"]
+    enabled: true
+  
+  script:
+    extensions: [".ps1", ".bat", ".sh", ".cmd", ".vbs"]
+    enabled: true
+  
+  doc:
+    extensions: [".md", ".rst", ".txt", ".docx"]
+    enabled: true
+  
+  config:
+    extensions: [".json", ".yaml", ".yml", ".xml", ".toml", ".ini"]
+    enabled: true
+  
+  task:
+    extensions: [".xml", ".cron"]
+    enabled: true
+  
+  checklist:
+    extensions: [".md"]
+    patterns: ["checklist", "startup", "health"]
+    enabled: true
+  
+  implicit:
+    extensions: [".md", ".log", ".txt"]
+    patterns: ["memory", "log", "history"]
+    enabled: true
+
+# 风险等级配置（可自定义关键词）
+impact_rules:
+  high:
+    keywords: ["startup", "health", "cron", "task", "gateway", "service"]
+    action: "必须处理"
+  
+  medium:
+    keywords: ["readme", "guide", "example", "tutorial"]
+    action: "建议处理"
+  
+  low:
+    keywords: ["memory", "history", "archive", "log"]
+    action: "可保留"
+
+# 输出配置
+output:
+  # 默认输出格式: markdown 或 json
+  format: markdown
+  
+  # 默认输出路径（相对于workspace）
+  path: butterfly_report.md
+  
+  # 是否包含性能统计
+  include_performance: true
+  
+  # 是否包含扫描覆盖率
+  include_coverage: true
+
+# 历史记录配置
+history:
+  # 是否启用历史记录
+  enabled: true
+  
+  # 历史数据库路径（相对于workspace）
+  db_path: .butterfly_history.json
+  
+  # 保留历史记录数量
+  max_records: 100
+
+# 动态风险评估配置
+dynamic_risk:
+  # 是否启用动态风险评估
+  enabled: true
+  
+  # 基于历史失败次数调整风险等级
+  failure_thresholds:
+    high: 5    # 失败≥5次，风险等级提升为high
+    medium: 3  # 失败≥3次，风险等级提升为medium
+
+# CI/CD集成配置
+ci_cd:
+  # 是否在CI/CD中自动运行
+  auto_run: false
+  
+  # 扫描失败时的行为: warn（警告）或 fail（阻止）
+  on_risk: warn
+  
+  # 需要阻止的风险等级: high 或 medium
+  block_level: high

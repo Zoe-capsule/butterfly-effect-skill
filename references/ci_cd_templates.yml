@@ -1,0 +1,105 @@
+# 蝴蝶效应扫描器 CI/CD 集成模板
+# 文件: .github/workflows/butterfly-scan.yml
+
+name: Butterfly Effect Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  butterfly-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: pip install pyyaml
+      
+      - name: Run butterfly scan
+        run: |
+          python butterfly-effect/scripts/butterfly_scan.py \
+            --workspace . \
+            --incremental \
+            --output butterfly_report.md \
+            --format markdown
+      
+      - name: Check high risks
+        id: check_risks
+        run: |
+          # 检查报告中是否有高影响依赖
+          if grep -q "\\[HIGH\\]" butterfly_report.md; then
+            echo "has_high_risks=true" >> $GITHUB_OUTPUT
+            echo "::warning::发现高影响依赖，请检查报告"
+          else
+            echo "has_high_risks=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: butterfly-report
+          path: butterfly_report.md
+      
+      - name: Fail on high risks (optional)
+        if: steps.check_risks.outputs.has_high_risks == 'true'
+        run: |
+          echo "发现高影响依赖，阻止合并"
+          # 如果需要阻止，取消下一行注释
+          # exit 1
+
+---
+# GitLab CI 模板
+# 文件: .gitlab-ci.yml
+
+butterfly-scan:
+  stage: test
+  image: python:3.10
+  script:
+    - pip install pyyaml
+    - python butterfly-effect/scripts/butterfly_scan.py
+      --workspace .
+      --incremental
+      --output butterfly_report.json
+      --format json
+  artifacts:
+    paths:
+      - butterfly_report.json
+    expire_in: 1 week
+  allow_failure: false  # 或 true（允许失败）
+
+---
+# Jenkins Pipeline 模板
+# 文件: Jenkinsfile
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Butterfly Scan') {
+            steps {
+                sh 'pip install pyyaml'
+                sh '''
+                    python butterfly-effect/scripts/butterfly_scan.py \
+                      --workspace . \
+                      --incremental \
+                      --output butterfly_report.md
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'butterfly_report.md', fingerprint: true
+                }
+            }
+        }
+    }
+}

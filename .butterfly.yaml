@@ -1,0 +1,46 @@
+# 蝴蝶效应扫描器配置示例
+# 文件名: .butterfly.yaml
+# 位置: 项目根目录
+
+# 扫描配置
+scan:
+  mode: incremental          # full 或 incremental
+  use_cache: true
+  cache_file: .butterfly_cache.json
+  exclude_paths:
+    - .git
+    - node_modules
+    - __pycache__
+    - .bak
+
+# 扫描类型
+scan_types:
+  code:
+    extensions: [py, js, ts]
+    enabled: true
+  config:
+    extensions: [json, yaml, xml]
+    enabled: true
+
+# 风险等级
+impact_rules:
+  high:
+    keywords: [startup, health, gateway]
+    action: 必须处理
+
+# 输出配置
+output:
+  format: markdown
+  include_performance: true
+
+# 历史记录
+history:
+  enabled: true
+  max_records: 50
+
+# 动态风险评估
+dynamic_risk:
+  enabled: true
+  failure_thresholds:
+    high: 5
+    medium: 3
