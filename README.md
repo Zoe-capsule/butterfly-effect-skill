@@ -1,4 +1,4 @@
-# Butterfly Effect Skill
+# 🦋 Butterfly Effect Skill 蝴蝶效应技能 🦋
 
 > **全局依赖扫描器 - 执行变更前先预判连锁反应**
 
