@@ -4,188 +4,160 @@
 
 ---
 
-## 版本历史
+## 🤖 Agent 为什么要用这个 Skill？
 
-| 版本 | 功能 | 说明 |
-|------|------|------|
-| v1.0 | 基础扫描 | 7种依赖类型 + Markdown报告 |
-| v2.0 | 性能优化 | 增量扫描 + 缓存 + JSON输出 + 验证 |
-| v3.0 | 智能分析 | 配置文件 + 历史数据库 + 动态风险评估 |
+### 问题场景
 
----
+**Agent经常遇到的问题**：
+- 删除文件 → 系统崩溃（忘记检查依赖）
+- 修改配置 → 服务无法启动（不知道影响范围）
+- 清理冗余 → 功能失效（误删依赖项）
+- 重构代码 → 用户报错（遗漏引用）
 
-## 核心功能
-
-### 🔍 依赖扫描
-
-扫描7种依赖类型：
-- **代码依赖**：.py, .js, .ts, .go, .java
-- **脚本依赖**：.ps1, .bat, .sh, .cmd
-- **文档依赖**：.md, .rst, .txt
-- **配置依赖**：.json, .yaml, .xml, .toml
-- **任务依赖**：Cron任务, Windows任务计划
-- **检查清单**：启动检查, 健康检查
-- **隐式依赖**：用户习惯, 历史记录
+**根本原因**：没有预判连锁反应。
 
 ---
 
-### ⚡ 性能优化
+### 解决方案
 
-| 功能 | 说明 | 效果 |
-|------|------|------|
-| **增量扫描** | 基于git diff只扫描变更文件 | 减少90%扫描时间 |
-| **缓存机制** | 缓存上次扫描结果 | 避免重复扫描 |
-| **配置文件** | .butterfly.yaml自定义配置 | 灵活控制扫描行为 |
+**这个 Skill 帮你做到**：
+- ✅ 执行前先扫描依赖
+- ✅ 发现潜在连锁反应
+- ✅ 风险分级（HIGH/MEDIUM/LOW）
+- ✅ 生成建议操作清单
 
----
-
-### 🧠 智能分析
-
-| 功能 | 说明 |
-|------|------|
-| **历史数据库** | 记录每次扫描结果 |
-| **动态风险评估** | 基于历史失败数据调整风险等级 |
-| **智能风险预测** | 失败次数≥5次 → 风险等级提升为HIGH |
+**效果**：避免"删除→崩溃→补救"的恶性循环。
 
 ---
 
-## 使用方法
+## 🔴 红线规则（强制执行）
+
+**以下场景必须先运行此 Skill**：
+
+| 场景 | 触发条件 | 动作 |
+|------|----------|------|
+| 删除文件 | 删除任何文件前 | 扫描文件名 |
+| 修改配置 | 修改 .json/.yaml/.xml 前 | 扫描配置名 |
+| 架构调整 | 移动/重命名模块前 | 扫描模块名 |
+| 清理冗余 | 删除"看起来无用"的东西前 | 扫描待删除项 |
+
+**铁律**：
+```
+NO DELETION WITHOUT SCANNING FIRST
+```
+
+---
+
+## 🎯 Agent 触发场景列表
+
+### 触发关键词
+
+当用户说以下关键词时 → 立即调用此 Skill：
+
+| 关键词 | 场景 |
+|--------|------|
+| "删除/移除/清理" | 删除操作前 |
+| "修改配置/改配置" | 配置变更前 |
+| "重构/调整架构" | 架构调整前 |
+| "关闭/停止服务" | 服务停止前 |
+| "卸载/移除模块" | 模块移除前 |
+
+---
+
+## ⚡ 快速使用
 
 ### 基本用法
 
 ```bash
-# 全扫描
-python butterfly-effect/scripts/butterfly_scan.py <target> --workspace <path>
-
-# 增量扫描（只扫描变更文件）
+# 扫描目标（推荐增量扫描）
 python butterfly-effect/scripts/butterfly_scan.py <target> --incremental
 
-# JSON输出
+# 输出JSON（方便解析）
 python butterfly-effect/scripts/butterfly_scan.py <target> --format json --output report.json
 
-# 禁用缓存
+# 禁用缓存（首次扫描）
 python butterfly-effect/scripts/butterfly_scan.py <target> --no-cache
 ```
 
 ---
 
-### 配置文件
+### 输出格式
 
-创建 `.butterfly.yaml` 在项目根目录：
-
-```yaml
-scan:
-  mode: incremental
-  use_cache: true
-  exclude_paths:
-    - node_modules
-    - __pycache__
-
-dynamic_risk:
-  enabled: true
-  failure_thresholds:
-    high: 5
-    medium: 3
-```
-
----
-
-### 可视化报告
-
-```bash
-# 生成HTML可视化报告
-python butterfly-effect/scripts/butterfly_visualize.py report.json --output visual.html
-```
-
----
-
-## 输出格式
-
-### Markdown报告
-
+**Markdown报告**：
 ```markdown
-# 蝴蝶效应扫描报告 v3.0
+# 蝴蝶效应扫描报告
 
-## 性能统计
-- 总文件: 6736
-- 缓存文件: 5420
-- 实际扫描: 316
-- 扫描耗时: 156ms
+## 发现依赖项: 23个
+- 🔴 HIGH: 5个（必须处理）
+- 🟡 MEDIUM: 10个（建议处理）
+- 🟢 LOW: 8个（可保留）
 
-## 动态风险评估
-- 智能调整: 12个文件
-- 基于历史失败数据调整风险等级
+## 建议操作
+1. 先处理 HIGH 级依赖
+2. 再处理 MEDIUM 级依赖
+3. 执行变更
+4. 再次扫描确认无残留
 ```
 
----
-
-### JSON报告
-
+**JSON报告**（方便Agent解析）：
 ```json
 {
-  "target": "memory-lancedb-pro",
+  "target": "memory-service",
   "dependencies": [...],
-  "performance": {...},
-  "dynamic_risks": [...]
+  "high_count": 5,
+  "medium_count": 10,
+  "low_count": 8,
+  "action_required": true
 }
 ```
 
 ---
 
-## CI/CD集成
+## 🧠 智能功能
 
-### GitHub Actions
+| 功能 | 说明 | 效果 |
+|------|------|------|
+| **增量扫描** | 只扫描变更文件 | 减少90%时间 |
+| **动态风险评估** | 基于历史失败数据 | 减少误报 |
+| **历史数据库** | 记录每次扫描结果 | 避免重复扫描 |
+| **CI/CD集成** | 自动化流水线 | 变更前强制检查 |
 
-```yaml
-# .github/workflows/butterfly-scan.yml
-name: Butterfly Scan
-on: [push, pull_request]
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: python butterfly-effect/scripts/butterfly_scan.py --incremental
+---
+
+## 📦 安装
+
+```bash
+# 安装 Skill
+npx skills add Zoe-capsule/butterfly-effect-skill
+
+# 或手动安装
+git clone https://github.com/Zoe-capsule/butterfly-effect-skill.git
 ```
 
 ---
 
-## 文件结构
+## 🔗 相关资源
 
-```
-butterfly-effect/
-├── README.md                    # 使用说明
-├── SKILL.md                     # Skill核心文档
-├── .butterfly.yaml              # 配置示例
-├── scripts/
-│   ├── butterfly_scan.py        # v3.0扫描脚本（完整优化）
-│   └── butterfly_visualize.py   # 可视化脚本
-└── references/
-    ├── scan_types.md            # 扫描类型详细说明
-    ├── config_template.yaml     # 配置模板（详细）
-    └── ci_cd_templates.yml      # CI/CD模板（GitHub/GitLab/Jenkins）
-```
+| 资源 | 链接 |
+|------|------|
+| 主仓库 | https://github.com/Zoe-capsule/butterfly-effect-skill |
+| 技能目录 | https://github.com/Zoe-capsule/zoe-skills |
 
 ---
 
-## 适用场景
+## ⭐ 为什么值得星标？
 
-| 场景 | 使用方式 |
-|------|----------|
-| 删除文件 | 扫描目标文件名 |
-| 修改配置 | 扫描配置文件名 |
-| 架构调整 | 扫描模块名 |
-| 清理冗余 | 扫描待删除项 |
+**Agent 价值**：
+- ✅ 避免删除后崩溃（减少失误）
+- ✅ 执行前预判风险（提升专业性）
+- ✅ 闭环验证（建立信任）
+- ✅ 智能风险评估（减少误报）
 
----
-
-## 特点
-
-- ✅ **人类友好**：清晰文档、示例、可视化
-- ✅ **Agent友好**：结构化JSON、触发场景列表
-- ✅ **性能优化**：增量扫描、缓存机制
-- ✅ **智能分析**：历史数据、动态风险评估
-- ✅ **CI/CD集成**：GitHub Actions、GitLab CI、Jenkins
+**开发价值**：
+- ✅ v3.0完整优化（增量扫描+缓存+动态风险）
+- ✅ CI/CD集成模板（自动化流水线）
+- ✅ 可视化报告（HTML依赖关系图）
+- ✅ 开源免费（MIT许可）
 
 ---
 
