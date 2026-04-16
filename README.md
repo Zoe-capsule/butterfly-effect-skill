@@ -202,12 +202,49 @@ System runs normally ✅ 系统正常运行
 
 ### Performance Optimization
 
-> 性能优化（增量扫描）
+> 性能优化（分层扫描）
 
-| Mode 模式 | Time 耗时 | Description 说明 |
-|------|------|------|
-| Full Scan 全量扫描 | ~5 min | Scan all files (first time) 扫描所有文件（首次） |
-| Incremental Scan 增量扫描 | ~30 sec | Scan only changes (recommended) 只扫描变更（推荐） |
+| Layer 层级 | Time 耗时 | Description 说明 | Use Case 适用场景 |
+|------|------|------|------|
+| **Quick Layer 快速层** | ~30 sec | Scan core files only (py/js/json/yaml/md) 只扫描核心文件 | Quick check 快速预判 |
+| **Standard Layer 标准层** | ~60 sec | Scan all files + history database 扫描所有文件+历史数据库 | Regular check 常规检查 |
+| **Full Scan 完整层** | ~5 min | Full scan + dynamic risk assessment 完整扫描+动态风险评估 | Important changes 重要变更 |
+
+**使用方法：**
+```bash
+# Quick Layer (30秒)
+python butterfly_scan.py <target> --layer quick
+
+# Standard Layer (60秒)
+python butterfly_scan.py <target> --layer standard
+
+# Full Scan (5分钟，默认)
+python butterfly_scan.py <target> --layer full
+```
+
+---
+
+### Quick Scan Wrapper
+
+> 轻量扫描器（适合其他Agent）
+
+**特点：**
+- ✅ **30秒内完成** - Quick response for other Agents
+- ✅ **核心文件类型** - py/js/ps1/json/yaml/md
+- ✅ **快速分级** - HIGH/MEDIUM/LOW keywords
+- ✅ **建议完整扫描** - If HIGH>5, recommend full scan
+
+**使用方法：**
+```bash
+# Quick wrapper (30秒)
+python butterfly_quick_scan.py <target> --workspace <path> --output json
+```
+
+**适用场景：**
+| Agent | Tool | Speed | Cache |
+|-------|------|-------|-------|
+| Vivian | butterfly_scan.py (full) | 慢但可缓存 | Mem0持久化 |
+| 其他Agent | butterfly_quick_scan.py | 快速响应 | 无缓存 |
 
 **性能提升：10倍**
 
@@ -226,6 +263,7 @@ butterfly-effect-skill/
 │
 ├── scripts/               # 脚本目录
 │   ├── butterfly_scan.py        # 🔍 核心扫描脚本（22KB，v3.0）
+│   ├── butterfly_quick_scan.py  # ⚡ 轻量扫描器（9KB，30秒完成）
 │   └── butterfly_visualize.py   # 📊 可视化报告生成（6KB）
 │
 ├── references/            # 参考文档目录

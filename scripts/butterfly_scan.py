@@ -586,10 +586,19 @@ def main():
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     parser.add_argument("--incremental", action="store_true", help="增量扫描")
     parser.add_argument("--no-cache", action="store_true", help="禁用缓存")
+    parser.add_argument("--layer", choices=["quick", "standard", "full"], default="full", help="扫描层级（quick=30秒，standard=60秒，full=5分钟）")
     
     args = parser.parse_args()
     
     search_terms = args.terms or [args.target]
+    
+    # 分层扫描策略
+    layer_config = {
+        "quick": {"extensions": ["py", "js", "ps1", "json", "yaml", "md"], "max_files": 100, "use_history": False, "use_dynamic_risk": False},
+        "standard": {"extensions": None, "max_files": 500, "use_history": True, "use_dynamic_risk": False},
+        "full": {"extensions": None, "max_files": None, "use_history": True, "use_dynamic_risk": True}
+    }
+    layer = layer_config[args.layer]
     
     # 创建扫描器
     scanner = ButterflyScanner(args.workspace)
@@ -597,6 +606,14 @@ def main():
     # 如果指定--no-cache，临时禁用
     if args.no_cache:
         scanner.cache = None
+    
+    # 根据层级调整配置
+    if args.layer == "quick":
+        scanner.config.config["history"]["enabled"] = False
+        scanner.config.config["dynamic_risk"]["enabled"] = False
+    if args.layer == "standard":
+        scanner.config.config["history"]["enabled"] = True
+        scanner.config.config["dynamic_risk"]["enabled"] = False
     
     # 执行扫描
     results = scanner.scan(args.target, search_terms, incremental=args.incremental)
@@ -608,14 +625,20 @@ def main():
     
     # 输出摘要
     perf = results["performance"]
-    print(f"[OK] v3.0扫描完成")
+    print(f"[OK] v3.0扫描完成 - 层级: {args.layer}")
     print(f"  - 模式: {perf['scan_mode']}")
     print(f"  - 文件: {perf['total_files']}")
     print(f"  - 缓存: {perf['cached_files']}")
     print(f"  - 扫描: {perf['scanned_files']}")
     print(f"  - 耗时: {perf['scan_duration_ms']}ms")
-    print(f"  - 动态风险调整: {len(results['dynamic_risks'])}个")
+    if args.layer == "full":
+        print(f"  - 动态风险调整: {len(results['dynamic_risks'])}个")
     print(f"  - 报告: {output_path}")
+    
+    # 如果quick层发现HIGH风险>5，建议跑完整扫描
+    if args.layer == "quick" and len([d for d in results["dependencies"] if d["impact"] == "high"]) > 5:
+        print(f"\n[WARN] HIGH风险>5，建议运行完整扫描:")
+        print(f"       python butterfly_scan.py {args.target} --layer full")
 
 
 if __name__ == "__main__":
