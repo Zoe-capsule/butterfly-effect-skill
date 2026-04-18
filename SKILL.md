@@ -2,8 +2,8 @@
 name: butterfly-effect
 author: Zoe-capsule
 author_github: Zoe-capsule
-version: 3.3
-description: 全局依赖扫描+同步更新器，在局部增删改前预判影响范围并执行同步更新，避免隐性错误和BUG。**v3.3新增三层扫描机制**：配置文件层（Gateway配置、凭证）+ Workspace层（用户文件、skills）+ 系统代码层（OpenClaw核心代码、内置扩展）。完整执行闭环：局部增删改 → 扫描影响 → 生成更新计划 → 用户批准 → 执行同步更新 → 验证。触发场景：(1) 用户要求删除文件 (2) 用户要求修改配置 (3) 用户要求调整架构 (4) 用户要求移除服务/模块 (5) 用户要求修改脚本。包含7种扫描类型（代码、脚本、文档、配置、任务、检查清单、隐式依赖），分类影响程度（高/中/低），生成更新计划并执行同步更新。
+version: 3.4
+description: 全局依赖扫描+同步更新器，在局部增删改前预判影响范围并执行同步更新，避免隐性错误和BUG。**v3.4新增增强扫描**：8种匹配类型（literal/dynamic_path/conditional/method_call/env_var/error_msg/log_output/docstring），解决原版遗漏风险（动态路径拼接、条件分支引用、错误消息扫描）。**v3.3新增三层扫描机制**：配置文件层+Workspace层+系统代码层。完整执行闭环：局部增删改 → 扫描影响 → 生成更新计划 → 用户批准 → 执行同步更新 → 验证。触发场景：(1) 用户要求删除文件 (2) 用户要求修改配置 (3) 用户要求调整架构 (4) 用户要求移除服务/模块 (5) 用户要求修改脚本。包含7种扫描类型（代码、脚本、文档、配置、任务、检查清单、隐式依赖），分类影响程度（高/中/低），生成更新计划并执行同步更新。
 ---
 
 # 蝴蝶效应扫描器
@@ -23,7 +23,27 @@ description: 全局依赖扫描+同步更新器，在局部增删改前预判影
 
 ---
 
-## 三层扫描机制（v3.3新增）
+## 增强扫描模式（v3.4新增）
+
+基于用户反馈，新增8种匹配类型，解决原版遗漏风险：
+
+| 匹配类型 | 遗漏风险 | 说明 |
+|----------|----------|------|
+| **literal** | - | 字面字符串匹配（原版） |
+| **dynamic_path** | HIGH | 动态路径拼接（f-string, os.path.join, path.join等） |
+| **conditional** | HIGH | 条件分支引用（if/else if/elif/switch） |
+| **method_call** | HIGH | 方法调用（.get/.post/.fetch/.load/.save等） |
+| **env_var** | HIGH | 环境变量依赖（os.environ, process.env） |
+| **error_msg** | MEDIUM | 错误消息（raise/throw/Error） |
+| **log_output** | LOW | 日志输出（print/console.log/logging） |
+| **docstring** | LOW | 文档字符串（TODO/FIXME） |
+
+**使用增强版**：
+```bash
+py scripts/butterfly_scan_enhanced.py <target> --layers config workspace system
+```
+
+---
 
 基于实际使用反馈，扫描范围扩展为三层，避免遗漏配置文件和系统代码依赖：
 
@@ -67,8 +87,10 @@ description: 全局依赖扫描+同步更新器，在局部增删改前预判影
 - 触发场景：用户要求删除文件、修改配置、调整架构
 
 **Step 2: 扫描影响**
-- 运行三层扫描脚本（推荐）：scripts/butterfly_scan_layers.py
+- 运行增强版扫描脚本（推荐）：scripts/butterfly_scan_enhanced.py
+- 运行三层扫描脚本：scripts/butterfly_scan_layers.py
 - 或运行单层扫描脚本：scripts/butterfly_scan.py
+- 分析扫描结果（按匹配类型分类：literal/dynamic_path/conditional/method_call/env_var/error_msg/log_output/docstring）
 - 分析扫描结果（按影响程度分类：HIGH/MEDIUM/LOW）
 
 **Step 3: 生成更新计划**
