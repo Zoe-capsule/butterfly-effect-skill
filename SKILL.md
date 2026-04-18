@@ -2,8 +2,8 @@
 name: butterfly-effect
 author: Zoe-capsule
 author_github: Zoe-capsule
-version: 3.4
-description: 全局依赖扫描+同步更新器，在局部增删改前预判影响范围并执行同步更新，避免隐性错误和BUG。**v3.4新增增强扫描**：8种匹配类型（literal/dynamic_path/conditional/method_call/env_var/error_msg/log_output/docstring），解决原版遗漏风险（动态路径拼接、条件分支引用、错误消息扫描）。**v3.3新增三层扫描机制**：配置文件层+Workspace层+系统代码层。完整执行闭环：局部增删改 → 扫描影响 → 生成更新计划 → 用户批准 → 执行同步更新 → 验证。触发场景：(1) 用户要求删除文件 (2) 用户要求修改配置 (3) 用户要求调整架构 (4) 用户要求移除服务/模块 (5) 用户要求修改脚本。包含7种扫描类型（代码、脚本、文档、配置、任务、检查清单、隐式依赖），分类影响程度（高/中/低），生成更新计划并执行同步更新。
+version: 3.5
+description: 全局依赖扫描+同步更新器，在局部增删改前预判影响范围并执行同步更新，避免隐性错误和BUG。**v3.5重大升级**：完整更新闭环（扫描→生成计划→用户批准→执行更新→验证）+ AST深度解析（检测动态导入、反射调用、类继承）+ 智能过滤（HIGH优先显示，MEDIUM/LOW折叠）+ 通用路径支持（自动检测用户目录）。**v3.4新增增强扫描**：8种匹配类型。**v3.3新增三层扫描机制**：配置文件层+Workspace层+系统代码层。触发场景：(1) 用户要求删除文件 (2) 用户要求修改配置 (3) 用户要求调整架构 (4) 用户要求移除服务/模块 (5) 用户要求修改脚本。包含7种扫描类型，分类影响程度（高/中/低），生成更新计划并执行同步更新。
 ---
 
 # 蝴蝶效应扫描器
@@ -23,25 +23,63 @@ description: 全局依赖扫描+同步更新器，在局部增删改前预判影
 
 ---
 
-## 增强扫描模式（v3.4新增）
+## v3.5重大升级（P1+P2优化）
+
+### 完整更新闭环
+三个脚本实现完整流程：
+
+| 脚本 | 功能 | 输入 | 输出 |
+|------|------|------|------|
+| **butterfly_scan_v3.5.py** | AST+正则扫描 | 目标关键词 | JSON扫描结果 |
+| **update_plan_generator.py** | 生成更新计划 | 扫描JSON | 更新计划文档+JSON |
+| **update_executor.py** | 执行更新操作 | 计划JSON | 执行报告 |
+
+### AST深度解析（Python）
+检测复杂依赖，原版正则无法识别：
+
+| AST检测类型 | 说明 | 影响程度 |
+|-------------|------|----------|
+| **dynamic_import** | `__import__('xxx')`, `importlib.import_module()` | HIGH |
+| **reflection** | `getattr(obj, 'attr')` 反射调用 | HIGH |
+| **inheritance** | `class Foo(Base)` 类继承 | HIGH |
+| **import/from_import** | 静态导入语句 | HIGH |
+| **attribute_access** | 属性访问 `obj.attr` | MEDIUM |
+| **function_def** | 函数定义包含关键词 | MEDIUM |
+
+### 智能过滤
+HIGH优先显示，MEDIUM/LOW折叠，避免信息过载：
+
+```
+HIGH: 14个 → 全部显示（必须处理）
+MEDIUM: 45个 → 显示3个样本（建议处理，--show-all查看全部）
+LOW: 50个 → 显示3个样本（可保留，历史记录）
+```
+
+### 通用路径支持
+自动检测用户目录，不硬编码：
+
+```python
+def get_user_home(): Path(os.path.expanduser('~'))
+def get_openclaw_root(): Path.home() / '.openclaw'
+def get_openclaw_system_path(): # 自动检测npm全局安装路径
+```
+
+---
+
+## 增强扫描模式（v3.4）
 
 基于用户反馈，新增8种匹配类型，解决原版遗漏风险：
 
 | 匹配类型 | 遗漏风险 | 说明 |
 |----------|----------|------|
 | **literal** | - | 字面字符串匹配（原版） |
-| **dynamic_path** | HIGH | 动态路径拼接（f-string, os.path.join, path.join等） |
-| **conditional** | HIGH | 条件分支引用（if/else if/elif/switch） |
-| **method_call** | HIGH | 方法调用（.get/.post/.fetch/.load/.save等） |
-| **env_var** | HIGH | 环境变量依赖（os.environ, process.env） |
+| **dynamic_path** | HIGH | 动态路径拼接（f-string, os.path.join） |
+| **conditional** | HIGH | 条件分支引用（if/else if/elif） |
+| **method_call** | HIGH | 方法调用（.get/.post/.fetch） |
+| **env_var** | HIGH | 环境变量依赖（os.environ） |
 | **error_msg** | MEDIUM | 错误消息（raise/throw/Error） |
-| **log_output** | LOW | 日志输出（print/console.log/logging） |
+| **log_output** | LOW | 日志输出（print/console.log） |
 | **docstring** | LOW | 文档字符串（TODO/FIXME） |
-
-**使用增强版**：
-```bash
-py scripts/butterfly_scan_enhanced.py <target> --layers config workspace system
-```
 
 ---
 
@@ -144,7 +182,19 @@ py scripts/butterfly_scan_enhanced.py <target> --layers config workspace system
 
 ## 扫描命令
 
-### 基本用法
+### v3.5完整流程（推荐）
+```bash
+# Step 1: 扫描（AST+正则+智能过滤）
+python scripts/butterfly_scan_v3.5.py <target> --json scan_result.json
+
+# Step 2: 生成更新计划
+python scripts/update_plan_generator.py scan_result.json --json update_plan.json
+
+# Step 3: 执行更新（需用户批准）
+python scripts/update_executor.py update_plan.json --output report.md
+```
+
+### 基本用法（单层扫描）
 ```bash
 python scripts/butterfly_scan.py <target> --workspace <path>
 ```
@@ -277,8 +327,9 @@ python scripts/butterfly_scan.py <target> --output butterfly_report.md
 
 ## 版本信息
 
-- **版本**: v3.2
-- **更新时间**: 2026-04-16
-- **更新内容**: 添加完整执行闭环（生成更新计划 → 叶哥批准 → 执行同步更新 → 验证）
-- **验证状态**: 已通过实际案例验证
+- **版本**: v3.5
+- **更新时间**: 2026-04-18
+- **更新内容**: P1+P2优化：完整更新闭环 + AST深度解析 + 智能过滤 + 通用路径支持
+- **新增脚本**: butterfly_scan_v3.5.py, update_plan_generator.py, update_executor.py
+- **验证状态**: 功能实现完成，待实际案例验证
 - **最终目标**: 提前想到局部增删改的影响并执行同步更新，避免隐性错误和BUG
